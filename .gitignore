@@ -53,3 +53,18 @@ dkms.conf
 
 # debug information files
 *.dwo
+
+# llvm - manualu genearted files
+*.ll
+
+# project
+.direnv/
+
+# CMake generated files and directories
+/build/
+/out/
+/.cache/
+
+# IDE specific (if you use them)
+/.vscode/
+/.idea/

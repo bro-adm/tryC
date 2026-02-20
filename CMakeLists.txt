@@ -10,7 +10,7 @@ pkg_check_modules(CRITERION REQUIRED criterion)
 include_directories(include)
 
 add_executable(shift_k_prog src/main.c)
-add_executable(test)
+# add_executable(test)
 
-target_compile_options(test PRIVATE ${CRITERION_CFLAGS})
-target_link_libraries(test PRIVATE ${CRITERION_LIBRARIES})
+# target_compile_options(test PRIVATE ${CRITERION_CFLAGS})
+# target_link_libraries(test PRIVATE ${CRITERION_LIBRARIES})

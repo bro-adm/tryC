@@ -1,5 +1,4 @@
 #include "tryC/bitops.h"
-#include <stddef.h>
 
 void swap(void* a, void* b, size_t len) {
     unsigned char *byte_a = (unsigned char *)a;

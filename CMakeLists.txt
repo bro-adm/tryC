@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.11)
-project(shift_k)
+project(bitwise-ops)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
@@ -9,7 +9,7 @@ pkg_check_modules(CRITERION REQUIRED criterion)
 
 include_directories(include)
 
-add_executable(shift_k_prog src/main.c)
+add_executable(main src/main.c src/bitops.c)
 # add_executable(test)
 
 # target_compile_options(test PRIVATE ${CRITERION_CFLAGS})

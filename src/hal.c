@@ -96,3 +96,67 @@ raid_result_t close_disk(disk_t **disk) {
     return RAID_SUCCESS;
 }
 
+raid_result_t get_disk_offset(uint64_t lba, const raid_config_t* config, disk_offset_t* disk_offset) {
+    assert(config != NULL);
+    assert(disk_offset != NULL);
+    assert(config->chunk_size > 0);
+    assert(config->num_disks > 0);
+
+    // in the HAL the lbas dont acknoledge if its a parity disk or not
+    // only linear -> 2D mapping in general -> no raid level specific logic
+
+    uint64_t lbs_per_stripe = (uint64_t)config->chunk_size * config->num_disks;
+    uint64_t stripe_idx = lba / lbs_per_stripe;
+    uint64_t lb_stripe_idx = lba % lbs_per_stripe;
+
+    // chunk in stripe == disk id
+    disk_offset->id = (uint32_t)(lb_stripe_idx / config->chunk_size);
+
+    // disk level lba offset
+    uint64_t lb_chunk_idx = lb_stripe_idx % config->chunk_size;
+    disk_offset->offset = (stripe_idx * config->chunk_size) + lb_chunk_idx;
+
+    return RAID_SUCCESS;
+}
+
+raid_result_t write_blocks(disk_t *disk, uint64_t disk_lb_offset, size_t num_blocks, const void *buffer){
+    assert(disk != NULL);
+    assert(buffer != NULL);
+    assert(num_blocks != 0);
+    assert(disk->fd >= 0);
+    assert(disk_lb_offset + num_blocks <= disk->num_lbs && "RAID Core attempted Out-of-Bounds Write!");
+
+    off_t byte_offset = (off_t)(disk_lb_offset * RAID_BLOCK_SIZE);
+    size_t total_bytes = num_blocks * RAID_BLOCK_SIZE;
+
+    ssize_t res = pwrite(disk->fd, buffer, total_bytes, byte_offset);
+    if (res < 0 || (size_t)res != total_bytes){
+        perror("RAID HAL: Physical Write Failed");
+        disk->state = DISK_FAILED;
+        return RAID_ERR_IO;
+    }
+
+    return RAID_SUCCESS;
+}
+
+raid_result_t read_blocks(disk_t* disk, uint64_t disk_lb_offset, size_t num_blocks, void* buffer) {
+    assert(disk != NULL);
+    assert(disk->fd >= 0);
+    assert(buffer != NULL);
+    assert(num_blocks > 0);
+    assert(disk_lb_offset + num_blocks <= disk->num_lbs && "HAL: Out-of-bounds read attempt!");
+
+    size_t total_bytes = num_blocks * RAID_BLOCK_SIZE;
+    off_t byte_offset = (off_t)(disk_lb_offset * RAID_BLOCK_SIZE);
+
+    ssize_t result = pread(disk->fd, buffer, total_bytes, byte_offset);
+
+    // result <= 0 handles both system errors and unexpected EOF
+    if (result <= 0 || (size_t)result != total_bytes) {
+        if (result < 0) perror("RAID HAL: Physical Read Failure");
+        disk->state = DISK_FAILED;
+        return RAID_ERR_IO;
+    }
+
+    return RAID_SUCCESS;
+}

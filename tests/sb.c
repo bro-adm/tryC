@@ -58,3 +58,37 @@ Test(sb_suite, lifecycle_roundtrip) {
     cr_expect_arr_eq(sb_r.raid_uuid, uuid, 16);
 }
 
+Test(sb_suite, read_catches_corruption) {
+    superblock_t sb_w = {0};
+    raid_config_t config = { .level = 1, .num_disks = 2, .chunk_size = 64, .version = 1 };
+    init_sb_t(sb_disk, &config, (uint8_t[16]){0xAA}, &sb_w);
+    write_sb(sb_disk, &sb_w);
+
+    uint8_t raw_block[RAID_BLOCK_SIZE];
+    read_blocks(sb_disk, SUPERBLOCK_OFFSET, 1, raw_block);
+    
+    // Test 1: Corrupt a numerical field (raid_level)
+    raw_block[offsetof(superblock_t, raid_level)] ^= 0xFF; 
+    write_blocks(sb_disk, SUPERBLOCK_OFFSET, 1, raw_block);
+    cr_expect_eq(read_sb(sb_disk, &(superblock_t){0}), RAID_ERR_CHECKSUM);
+
+    // Test 2: Corrupt the UUID array (raw bytes)
+    read_blocks(sb_disk, SUPERBLOCK_OFFSET, 1, raw_block); // Reset
+    raw_block[offsetof(superblock_t, raid_uuid) + 5] ^= 0xAA; 
+    write_blocks(sb_disk, SUPERBLOCK_OFFSET, 1, raw_block);
+    cr_expect_eq(read_sb(sb_disk, &(superblock_t){0}), RAID_ERR_CHECKSUM);
+}
+
+Test(sb_suite, signature_verification) {
+    superblock_t sb = {0};
+    raid_config_t config = { .level = RAID_0, .num_disks = 3, .chunk_size = 8 };
+    init_sb_t(sb_disk, &config, (uint8_t[16]){0}, &sb);
+
+    // Sabotage the signature
+    sb.raid_signature = 0xDEADC0DE;
+    write_sb(sb_disk, &sb);
+
+    superblock_t sb_read;
+    cr_expect_eq(read_sb(sb_disk, &sb_read), RAID_ERR_SIGNATURE, "Failed to catch invalid signature");
+}
+

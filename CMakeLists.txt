@@ -10,7 +10,7 @@ pkg_check_modules(CRITERION REQUIRED criterion)
 include_directories(include)
 
 add_executable(raid src/main.c)
-add_executable(test tests/hal.c src/hal.c)
+add_executable(test tests/hal.c src/hal.c tests/sb.c src/sb.c)
 
 target_compile_options(test PRIVATE ${CRITERION_CFLAGS})
 target_link_libraries(test PRIVATE ${CRITERION_LIBRARIES})

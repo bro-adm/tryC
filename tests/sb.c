@@ -92,3 +92,46 @@ Test(sb_suite, signature_verification) {
     cr_expect_eq(read_sb(sb_disk, &sb_read), RAID_ERR_SIGNATURE, "Failed to catch invalid signature");
 }
 
+Test(sb_suite, write_pads_with_zeros) {
+    superblock_t sb = {0};
+    raid_config_t config = { .level = 1, .num_disks = 2, .chunk_size = 64, .version = 1 };
+    uint8_t uuid[16] = {0};
+    init_sb_t(sb_disk, &config, uuid, &sb);
+
+    cr_assert_eq(write_sb(sb_disk, &sb), RAID_SUCCESS);
+
+    uint8_t raw_block[RAID_BLOCK_SIZE];
+    cr_assert_eq(read_blocks(sb_disk, SUPERBLOCK_OFFSET, 1, raw_block), RAID_SUCCESS);
+
+    // Verify bounds strictly
+    for (size_t i = sizeof(superblock_t); i < RAID_BLOCK_SIZE; i++) {
+        cr_expect_eq(raw_block[i], 0, "Padding leak at byte %zu!", i);
+    }
+}
+
+Test(sb_suite, superblock_data_isolation) {
+    superblock_t sb_w = {0};
+    raid_config_t config = { .level = RAID_0, .num_disks = 4, .chunk_size = 8 };
+    init_sb_t(sb_disk, &config, (uint8_t[16]){0xAA}, &sb_w);
+
+    // 1. Write a known pattern to the "User Data" area (LBA 1)
+    uint8_t user_pattern[RAID_BLOCK_SIZE];
+    memset(user_pattern, 0x55, RAID_BLOCK_SIZE);
+    cr_assert_eq(write_blocks(sb_disk, 1, 1, user_pattern), RAID_SUCCESS);
+
+    // 2. Write the Superblock to LBA 0
+    cr_assert_eq(write_sb(sb_disk, &sb_w), RAID_SUCCESS);
+
+    // 3. READ BACK LBA 1: Did the Superblock overwrite it?
+    uint8_t user_check[RAID_BLOCK_SIZE];
+    cr_assert_eq(read_blocks(sb_disk, 1, 1, user_check), RAID_SUCCESS);
+
+    // If your write_sb logic is wrong (e.g. it writes 1024 bytes instead of 512),
+    // this check will fail.
+    cr_expect_arr_eq(user_pattern, user_check, RAID_BLOCK_SIZE, "CRITICAL: write_sb leaked into LBA 1!");
+
+    // 4. READ BACK SUPERBLOCK: Did it stay clean?
+    superblock_t sb_r;
+    cr_assert_eq(read_sb(sb_disk, &sb_r), RAID_SUCCESS);
+    cr_expect_eq(sb_r.raid_signature, RAID_SIGNATURE);
+}

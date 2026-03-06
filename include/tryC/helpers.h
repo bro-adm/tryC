@@ -7,6 +7,8 @@
 #ifndef RAID_HELPERS
 #define RAID_HELPERS
 
+#include <stddef.h>
+
 #define BYTES_TO_BLOCKS(b) (((b) + RAID_BLOCK_SIZE - 1) / RAID_BLOCK_SIZE)
 #define IS_POWER_OF_2(x) (((x) & ((x) - 1)) == 0)
 
@@ -32,5 +34,13 @@
     #define htole64(x) (x)
     #define le64toh(x) (x)
 #endif
+
+// Pure memory XOR: target = target ^ source
+void core_xor_blocks(void* target, const void* source, size_t len);
+
+// Checksum calculation for a block of data
+uint32_t core_calculate_checksum(const void* buffer, size_t len);
+
+
 
 #endif // !RAID_HELPERS

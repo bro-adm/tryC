@@ -1,6 +1,7 @@
 #include "tryC/sb.h"
 #include "tryC/defs.h"
 #include "tryC/hal.h"
+#include "tryC/helpers.h"
 
 #include <assert.h>
 #include <string.h>
@@ -51,7 +52,7 @@ raid_result_t init_sb_t(const disk_t *disk, const raid_config_t* config, const u
     sb->num_disks      = htole32(config->num_disks);
     sb->chunk_size     = htole32(config->chunk_size);
     
-    sb->disk_capacity  = htole64(disk->num_lbs);
+    sb->disk_capacity  = htole64(disk->num_pbs);
 
     sb->checksum = htole32(calculate_sb_checksum(sb)); 
 
@@ -87,13 +88,12 @@ raid_result_t read_sb(disk_t *disk, superblock_t *sb) {
      * validate - checksum and signature
     */
 
-
-    sb->raid_signature = le32toh(sb->raid_signature);
-    if (sb->raid_signature != RAID_SIGNATURE) return RAID_ERR_SIGNATURE;
+    if (le32toh(sb->raid_signature) != RAID_SIGNATURE) return RAID_ERR_SIGNATURE;
     
     uint32_t stored_checksum = le32toh(sb->checksum);
     if (stored_checksum != calculate_sb_checksum(sb)) return RAID_ERR_CHECKSUM;
 
+    sb->raid_signature = le32toh(sb->raid_signature);
     sb->raid_version   = le32toh(sb->raid_version);
     sb->raid_level     = le32toh(sb->raid_level);
     sb->disk_id        = le32toh(sb->disk_id);

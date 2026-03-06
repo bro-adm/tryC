@@ -19,10 +19,15 @@ typedef enum {
 typedef enum {RAID_0, RAID_1, RAID_4, RAID_5} raid_level_t; // Changes the meaning of strips/chunks accordfing to their position and disk...
 
 typedef struct {
-    raid_level_t level;
     raid_version_t version;
+    raid_level_t level;
     uint32_t num_disks;
     uint32_t chunk_size;
+
+    uint32_t num_redundancy_disks;
+
+    uint64_t pbs_per_stripe;
+    uint64_t lbs_per_stripe;
 } raid_config_t;
 
 #define SECTOR_SIZE 512 // smallest read/write availble by hardware -> emulation from modern 4096 byte sectors
@@ -35,7 +40,7 @@ typedef enum {
     RAID_ERR_IO           = -1, 
     RAID_ERR_SIGNATURE    = -2, 
     RAID_ERR_CHECKSUM     = -3, 
-    RAID_ERR_INVALID_VAL  = -4, 
+    RAID_ERR_INVALID_VAL  = -4,
     RAID_ERR_NOMEM        = -5,
     RAID_ERR_INTERNAL
 } raid_result_t;

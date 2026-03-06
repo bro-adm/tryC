@@ -67,3 +67,22 @@ We use pread and pwrite becuase it works via the fd and writes in one system ope
 
 Making the writes and reads atomic meaning we only need a queue for the IO desired and that is provided to us by default via the kernel across all the sessions.
 We can make it better by overriding that queue with one that takes into account the current position on each disk and the known next queued ops.
+
+# Parity vs Mirroring
+
+mirroring is straight forward to undesrstand that another disk has the same data.
+parity is math calculations for raid 4,5,6 and more...
+
+parity is not mirroring.
+parity disks are set on a specific disk or interchnage per stripe
+
+raid 4 -> has a set parity disk
+raid 5 -> has left symteric rotating parity disks per according to stripe idx
+
+# RAID LIB Usage
+
+the ouput of this project is a raid lib. it is used by stuff like a raid OS having a filesystem ontop of it.
+When initializing the filesystem the raid os asks the raid lib what is its capacity and it answers the toatl amount of data capacity not including the redundancy disks...
+in raid 5 with 4 100gb disks it will answer that it has 300gb.
+
+that is why there is the general LB but it also is split into two, the phys_lb and the user_lb or better named the redundancy_lb and the data_lb

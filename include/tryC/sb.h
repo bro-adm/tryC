@@ -38,6 +38,7 @@ typedef struct disk disk_t; // opaque type for disk_t declared in partition.h
 
 #define SUPERBLOCK_OFFSET 0
 #define SUPERBLOCK_SIZE 1
+#define SUPERBLOCK_CHUNK_SIZE 1
 
 /* 
  * should take one logical block - raid block
